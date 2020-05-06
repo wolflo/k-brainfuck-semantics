@@ -6,6 +6,7 @@
 // ,	accept one byte of input, store in the byte at pointer
 // [	if the byte at pointer is zero, jump pointer past matching ]
 // ]	if the byte at pointer is nonzero, jump pointer back to matching [
+requires "types.k"
 
 module BRAINFUCK-SYNTAX
   imports DOMAINS-SYNTAX
@@ -32,6 +33,7 @@ endmodule
 module BRAINFUCK
   imports DOMAINS
   imports BRAINFUCK-SYNTAX
+  imports TYPES
 
   syntax Op ::= "INCPTR"
               | "DECPTR"
@@ -41,16 +43,9 @@ module BRAINFUCK
               | "OUTPUT"
               | "JUMP" Int  // td: do we need 2 different jumps?
 
-  syntax Lst ::= ".Lst"
-               | Lstable "::" Lst
-
-  syntax Lst ::= Lst "++" Lst [function, right]
-  rule .Lst      ++ YS => YS
-  rule (X :: XS) ++ YS => X :: (XS ++ YS)
-
-  syntax Lstable ::= Op
   syntax Ops = Lst
   syntax Ops ::= ".Ops"
+  syntax Lstable ::= Op
   rule .Ops => .Lst [macro]
 
   configuration <bf>
