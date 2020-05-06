@@ -6,7 +6,6 @@
 // ,	accept one byte of input, store in the byte at pointer
 // [	if the byte at pointer is zero, jump pointer past matching ]
 // ]	if the byte at pointer is nonzero, jump pointer back to matching [
-requires "types.k"
 
 module BRAINFUCK-SYNTAX
   imports DOMAINS-SYNTAX
@@ -33,7 +32,6 @@ endmodule
 module BRAINFUCK
   imports DOMAINS
   imports BRAINFUCK-SYNTAX
-  imports TYPES
 
   syntax Op ::= "INCPTR"
               | "DECPTR"
@@ -43,14 +41,9 @@ module BRAINFUCK
               | "OUTPUT"
               | "JUMP" Int  // td: do we need 2 different jumps?
 
-  syntax Ops = Lst
-  syntax Ops ::= ".Ops"
-  syntax Lstable ::= Op
-  rule .Ops => .Lst [macro]
-
   configuration <bf>
-                  <k>      $PGM:K   </k>
-                  <pgm>    .Ops     </pgm>
+                  <k>      $PGM:Exp   </k>
+                  <pgm>    .List    </pgm>
                   <pc>     0        </pc>
                   <ptr>    0        </ptr>
                   <mem>    .List    </mem>
@@ -60,10 +53,9 @@ module BRAINFUCK
 
   // TODO: how to handle jump translation?
   // convert cmds to ops and place in pgm cell
-  rule
-    <k> C:Cmd => .K ...</k>
-    <pgm> OS:Ops => OS ++ (#cmdToOp( C ) :: .Ops) </pgm>
-  [structural]
+  rule <k> C:Cmd => .K ...</k>
+       <pgm>... .List => ListItem(#cmdToOp( C )) </pgm>
+     [structural]
 
   rule E1:Exp E2:Exp => E1 ~> E2 [structural]
 
