@@ -7,211 +7,171 @@
 // [	if the byte at pointer is zero, jump pointer past matching ]
 // ]	if the byte at pointer is nonzero, jump pointer back to matching [
 
+// TODO:
+// - charToInt, intToChar
+// - test with other backends
+// Implementation settings:
+// - Memory Size (default 30,000)
+// - cell size
+// - memory overflow behavior (wrap, halt, etc.)
+// - memory starting values
 module BRAINFUCK-SYNTAX
   imports DOMAINS-SYNTAX
 
-  syntax Cmd ::= ">"
-              | "<"
-              | "["
-              | "]"
-              | "+"
+  syntax Cmd ::= "+"
               | "-"
+              | ">"
+              | "<"
               | ","
               | "."
+
+  syntax While ::= "[" "]"
+                | "[" Exp "]"
+
   syntax Exp ::= Cmd
-               | Exp Exp [left]
+               | While
+               | Exp Exp [left, strict]
 
 endmodule
 
 // TODO:
-// - jumps
-// - 8 bit cells
-// - halts?
-// - better representation of memory?
-// - abstract pc incrementing
-// - we should always inc memory when ptr goes past size(mem)
 // - this shits slow as hell. damn - Is it parsing, execution, or both?
+  // - my guess is that this is parsing related rather than execution, partially because the parsing approach seems highly non-standard. It's possible that it also has to do with our memory expansion approach. next step may be to directly pass in the ast for an equivalently large program and see if we can isolate execution speed.
+  // - indeed, only parsing 256 +'s seems to be taking outrageously long'
+  // - after removing all execution and basically all of the parsing, still got OutOfMemoryError. It would appear that 200 or so commands is just a lot to parse. This seems wrong though. Surely we can parse a 200 line program?
+  // - 300+ operations via loops shows no noticeable increase in resources usage or time
 module BRAINFUCK
   imports DOMAINS
   imports BRAINFUCK-SYNTAX
 
+  syntax KResult ::= Op
   syntax Op ::= "INCVAL"
               | "DECVAL"
-              | "READ"
-              | "PRINT"
               | "INCPTR"
               | "DECPTR"
-              | "JUMP" Int  // td: do we need 2 different jumps?
+              | "READ"
+              | "PRINT"
+              | "LOOP" Exp
 
-  configuration <bf>
-                  <k>      $PGM:Exp     </k>
-                  <pc>     0            </pc>
-                  <ptr>    0            </ptr>
-                  <pgm>    .List        </pgm>
-                  <mem>    ListItem(0)  </mem>
-                  <input>  .List        </input>
-                  <output> .List        </output>
-                </bf>
+  configuration
+    <bf>
+      <k>      $PGM:Exp    </k>
+      <ptr>    0:Int       </ptr>
+      <mem>    .Map        </mem>
+      <input>  .List       </input>
+      <output> .List       </output>
+    </bf>
 
-  // sequence commands
   rule E1:Exp E2:Exp => E1 ~> E2 [structural]
+  rule +        => INCVAL     [structural]
+  rule -        => DECVAL     [structural]
+  rule >        => INCPTR     [structural]
+  rule <        => DECPTR     [structural]
+  rule ,        => READ       [structural]
+  rule .:Cmd    => PRINT      [structural]
+  rule [ ]      => LOOP .     [structural]
+  rule [ BODY ] => LOOP BODY  [structural]
 
-  // TODO: how to handle jump translation?
-  // convert cmds to ops and place in pgm cell
-  rule <k> C:Cmd => .K ...</k>
-       <pgm>... .List => ListItem(#cmdToOp( C )) </pgm>
-    [structural]
+  rule
+    <k> INCVAL => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem>... PTR |-> (M => inc( M )) ...</mem>
+  rule
+    <k> INCVAL => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem> RHO:Map (.Map => PTR |-> 1) </mem>
+  requires notBool (PTR in keys(RHO))
 
-//TODO: java backend gets stuck on first loaded op
-  // TODO: add a termination case
-  // load the next op based on the PC
-  rule <k> .K => PGM[ PC ]</k>
-       <pc> PC => PC +Int 1 </pc>
-       <pgm> PGM </pgm>
-    requires notBool PC >=Int size(PGM)
+  rule
+    <k> DECVAL => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem>... PTR |-> (M => dec( M )) ...</mem>
+  rule
+    <k> DECVAL => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem> RHO:Map (.Map => PTR |-> chop( -1 ))</mem>
+  requires notBool (PTR in keys(RHO))
 
-  // TODO: overflow
-  rule <k> INCVAL => .K ...</k>
-       <ptr> PTR </ptr>
-       <mem> MEM => #incElem( MEM , PTR ) </mem>  // mem[ptr]++
-  rule <k> DECVAL => .K ...</k>
-       <ptr> PTR </ptr>
-       <mem> MEM => #decElem( MEM , PTR ) </mem>  // mem[ptr]--
+  rule
+    <k> INCPTR => .K ...</k>
+    <ptr> PTR => PTR +Int 1 </ptr>
+  requires PTR <Int 30000
+  rule
+    <k> DECPTR => .K ...</k>
+    <ptr> PTR => PTR -Int 1 </ptr>
+  requires PTR >=Int 1
 
-  rule <k> INCPTR => .K ...</k>
-       <ptr> PTR => PTR +Int 1 </ptr>
-       <mem> MEM => #growList(MEM, PTR +Int 1, 0) </mem>
+  rule
+    <k> READ => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem>... PTR |-> (_ => IN) ...</mem>
+    <input> ListItem(IN) => .List ...</input>
+  rule
+    <k> READ => .K ...</k>
+    <mem>... PTR |-> (_ => 0) ...</mem>
+    <input> .List </input>
+  rule
+    <k> READ => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem> RHO:Map (.Map => PTR |-> IN) </mem>
+    <input> ListItem(IN) => .List ...</input>
+  requires notBool (PTR in keys(RHO))
+  rule
+    <k> READ => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem> RHO:Map (.Map => PTR |-> 0) </mem>
+    <input> .List </input>
+  requires notBool (PTR in keys(RHO))
 
-  rule <k> DECPTR => .K ...</k>
-       <ptr> PTR => PTR -Int 1 </ptr>
-    requires PTR >=Int 1
+  rule
+    <k> PRINT => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem>... PTR |-> M ...</mem>
+    <output>... .List => ListItem(M) </output>
+  rule
+    <k> PRINT => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem> RHO:Map </mem>
+    <output>... .List => ListItem(0) </output>
+  requires notBool (PTR in keys(RHO))
 
-  syntax Op ::= #cmdToOp ( Cmd ) [function]
-  rule #cmdToOp( + ) => INCVAL
-  rule #cmdToOp( - ) => DECVAL
-  rule #cmdToOp( , ) => READ
-  rule #cmdToOp( . ) => PRINT
-  rule #cmdToOp( > ) => INCPTR
-  rule #cmdToOp( < ) => DECPTR
+  rule
+    <k> LOOP OPS => OPS ~> LOOP OPS ...</k>
+    <ptr> PTR </ptr>
+    <mem>... PTR |-> M ...</mem>
+  requires M >Int 0
+  rule
+    <k> LOOP OPS => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem>... PTR |-> M ...</mem>
+  requires M ==Int 0
+  rule
+    <k> LOOP OPS => .K ...</k>
+    <ptr> PTR </ptr>
+    <mem> RHO </mem>
+  requires notBool (PTR in keys(RHO))
 
-//td: can we generalize these? does k have higher order functions?
-  syntax List ::= #incElem( List , Int ) [function]
-  rule #incElem( (ListItem(X0) XS) , N ) => ListItem(chop(X0 +Int 1)) XS
-    requires N ==Int 0
-  rule #incElem( (ListItem(X0) XS) , N ) => ListItem(X0) #incElem(XS, N -Int 1)
-    requires N >Int 0
-
-  syntax List ::= #decElem( List , Int ) [function]
-  rule #decElem( (ListItem(X0) XS) , N ) => ListItem(chop(X0 -Int 1)) XS
-    requires N ==Int 0
-  rule #decElem( (ListItem(X0) XS) , N ) => ListItem(X0) #decElem(XS, N -Int 1)
-    requires N >Int 0
-
-  syntax List ::= #growList( List , Int , KItem ) [function]
-  rule #growList( XS , N , _ ) => XS requires N <Int size(XS)
-  rule #growList( XS , N , V ) => (XS #growList(ListItem(V), N -Int 1, V))
-    requires N >=Int size(XS)
+  syntax Int ::= inc ( Int )  [function, functional]
+  rule inc( I ) => chop( I +Int 1 )
+  syntax Int ::= dec ( Int )  [function, functional]
+  rule dec( I ) => chop( I -Int 1 )
 
   syntax Int ::= "pow8"
   rule pow8 => 256 [macro]
 
-// TODO: chop ( -1 ) returns -1?
-  syntax Int ::= chop( Int )  [function]
+  syntax Int ::= chop ( Int )  [function, functional]
   rule chop( I ) => I requires I >=Int 0 andBool I <Int pow8
-  rule chop( I ) => I %Int pow8 requires I <Int 0 orBool I >=Int pow8
+  rule chop( I ) => I %Int pow8 requires I >=Int pow8
+  rule chop( I ) => chop( pow8 +Int I ) requires I <Int 0
 
-  syntax List ::= List "[" Int ":=" KItem "]" [function]
-  rule (ListItem(X0) XS) [N := X] => ListItem(X) XS
-    requires N ==Int 0
-  rule (ListItem(X0) XS) [N := X] => ListItem(X0) (XS [N -Int 1 := X])
-    requires N >Int 0
-
-/*   // TODO: has to be a better way to do all this read matching */
-/*   rule */
-/*     <k> , => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem>... PTR |-> (_ => IN) ...</mem> */
-/*     <input> ListItem(IN) INS => INS </input> */
-/*   // TODO: write zero at end of input? */
-/*   rule */
-/*     <k> , => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem>... PTR |-> (_ => 0) ...</mem> */
-/*     <input> .List </input> */
-/*   rule */
-/*     <k> , => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem> RHO:Map (.Map => PTR|->IN) </mem> */
-/*     <input> ListItem(IN) INS => INS </input> */
-/*   requires notBool (PTR in keys(RHO)) */
-/*   rule */
-/*     <k> , => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem> RHO:Map (.Map => PTR|->0) </mem> */
-/*     <input> .List </input> */
-/*   requires notBool (PTR in keys(RHO)) */
-
-
-
-/* // TODO figure out how to use . in syntax */
-/*   // write output */
-/*   rule */
-/*     <k> OUTPUT => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem>... PTR |-> OUT ...</mem> */
-/*     <output> OUTS => OUTS ListItem(OUT) </output> */
-/*   rule */
-/*     <k> OUTPUT => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem>... PTR |-> OUT ...</mem> */
-/*     <output> .List => ListItem(OUT) </output> */
-
-/*   // move pointer */
-/*   rule */
-/*     <k> > => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR => PTR +Int 1 </ptr> */
-/*   rule */
-/*     <k> < => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR => PTR -Int 1 </ptr> */
-/*   requires PTR >=Int 1 */
-
-/*   // TODO: do these match in all cases we want them to? */
-/*   rule */
-/*     <k> + => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem> Rho:Map (.Map => PTR|->1) </mem> */
-/*   requires notBool (PTR in keys(Rho)) */
-/*   rule */
-/*     <k> + => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem>... PTR |-> (V => V +Int 1) ...</mem> */
-/*   rule */
-/*     <k> - => .K ...</k> */
-/*     <pc> PC => PC +Int 1 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem>... PTR |-> (V => V -Int 1) ...</mem> */
-/*   requires V >=Int 1 */
-
-/*   // shortcuts */
-/*   rule */
-/*     <k> [ ~> - ~>  ] => .K ...</k> */
-/*     <pc> PC => PC +Int 3 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem>... PTR |-> (V => 0) ...</mem> */
-/*   rule */
-/*     <k> [ ~> + ~>  ] => .K ...</k> */
-/*     <pc> PC => PC +Int 3 </pc> */
-/*     <ptr> PTR </ptr> */
-/*     <mem>... PTR |-> (V => 0) ...</mem> */
+// optimizations to zero a cell
+  /* rule */
+  /*   <k> LOOP - => .K ...</k> */
+  /*   <ptr> PTR </ptr> */
+  /*   <mem>... PTR |-> (_ => 0) ...</mem> */
+  /* rule */
+  /*   <k> LOOP + => .K ...</k> */
+  /*   <ptr> PTR </ptr> */
+  /*   <mem>... PTR |-> (_ => 0) ...</mem> */
 
 endmodule
