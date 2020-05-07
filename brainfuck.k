@@ -8,13 +8,15 @@
 // ]	if the byte at pointer is nonzero, jump pointer back to matching [
 
 // TODO:
-// - charToInt, intToChar
+// - ignore non-C-style comments
 // - test with other backends
+// - stdin? Might be a lost Kause
 // Implementation settings:
 // - Memory Size (default 30,000)
 // - cell size
 // - memory overflow behavior (wrap, halt, etc.)
 // - memory starting values
+// - endiannes?
 module BRAINFUCK-SYNTAX
   imports DOMAINS-SYNTAX
 
@@ -30,16 +32,12 @@ module BRAINFUCK-SYNTAX
 
   syntax Exp ::= Cmd
                | While
-               | Exp Exp [left, strict]
+               // strict kompiled with haskell backend fails to cool anything
+               /* | Exp Exp [left, strict] */
+               | Exp Exp [left]
 
 endmodule
 
-// TODO:
-// - this shits slow as hell. damn - Is it parsing, execution, or both?
-  // - my guess is that this is parsing related rather than execution, partially because the parsing approach seems highly non-standard. It's possible that it also has to do with our memory expansion approach. next step may be to directly pass in the ast for an equivalently large program and see if we can isolate execution speed.
-  // - indeed, only parsing 256 +'s seems to be taking outrageously long'
-  // - after removing all execution and basically all of the parsing, still got OutOfMemoryError. It would appear that 200 or so commands is just a lot to parse. This seems wrong though. Surely we can parse a 200 line program?
-  // - 300+ operations via loops shows no noticeable increase in resources usage or time
 module BRAINFUCK
   imports DOMAINS
   imports BRAINFUCK-SYNTAX
@@ -59,7 +57,8 @@ module BRAINFUCK
       <ptr>    0:Int       </ptr>
       <mem>    .Map        </mem>
       <input>  .List       </input>
-      <output> .List       </output>
+      <output stream="stdout"> .List </output>
+      /* <exit-code exit=""> 0 </exit-code> */
     </bf>
 
   rule E1:Exp E2:Exp => E1 ~> E2 [structural]
@@ -104,8 +103,8 @@ module BRAINFUCK
   rule
     <k> READ => .K ...</k>
     <ptr> PTR </ptr>
-    <mem>... PTR |-> (_ => IN) ...</mem>
-    <input> ListItem(IN) => .List ...</input>
+    <mem>... PTR |-> (_ => #ordHead( IN )) ...</mem>
+    <input> ListItem(IN:String) => .List ...</input>
   rule
     <k> READ => .K ...</k>
     <mem>... PTR |-> (_ => 0) ...</mem>
@@ -113,7 +112,7 @@ module BRAINFUCK
   rule
     <k> READ => .K ...</k>
     <ptr> PTR </ptr>
-    <mem> RHO:Map (.Map => PTR |-> IN) </mem>
+    <mem> RHO:Map (.Map => PTR |-> #ordHead( IN )) </mem>
     <input> ListItem(IN) => .List ...</input>
   requires notBool (PTR in keys(RHO))
   rule
@@ -127,12 +126,12 @@ module BRAINFUCK
     <k> PRINT => .K ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> M ...</mem>
-    <output>... .List => ListItem(M) </output>
+    <output>... .List => ListItem(chrChar(M))</output>
   rule
     <k> PRINT => .K ...</k>
     <ptr> PTR </ptr>
     <mem> RHO:Map </mem>
-    <output>... .List => ListItem(0) </output>
+    <output>... .List => ListItem(chrChar(0))</output>  //TODO
   requires notBool (PTR in keys(RHO))
 
   rule
@@ -163,6 +162,10 @@ module BRAINFUCK
   rule chop( I ) => I requires I >=Int 0 andBool I <Int pow8
   rule chop( I ) => I %Int pow8 requires I >=Int pow8
   rule chop( I ) => chop( pow8 +Int I ) requires I <Int 0
+
+  syntax Int ::= #ordHead( String ) [function]
+  rule #ordHead( S ) => ordChar(substrString(S, 0, 1)) requires lengthString(S) >=Int 1
+  rule #ordHead( S ) => 0 requires lengthString(S) ==Int 0
 
 // optimizations to zero a cell
   /* rule */
