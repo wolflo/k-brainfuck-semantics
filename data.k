@@ -11,23 +11,13 @@ module BRAINFUCK-DATA
   rule ordHead S => 0
     requires lengthString( S ) ==Int 0
 
-  // increment and decrement integers
+  // increment integers
   syntax Int ::= "inc" Int        [function, functional]
   rule inc I => I +Int 1
 
+  // decrement integers
   syntax Int ::= "dec" Int        [function, functional]
   rule dec I => I -Int 1
-
-  // wrapping increment and decrement
-  syntax Int ::= "#winc" Int Env   [function]
-  rule #winc I ENV => chop (inc I) (#intSize ENV)
-
-  syntax Int ::= "#wdec" Int Env   [function]
-  rule #wdec I ENV => chop (dec I) (#intSize ENV)
-
-  /* syntax Bool ::= Int "inRange" Int Int   [function, functional] */
-  syntax Bool ::= Int "<=" Int "<" Int   [function, functional]
-  rule A <= I < B => I >=Int A andBool (I <Int B)
 
   // overflow integers
   syntax Int ::= "chop" Int Int   [function, functional]
@@ -38,6 +28,9 @@ module BRAINFUCK-DATA
   rule chop I ON => chop (ON +Int I) ON
     requires I <Int 0
 
+  syntax Bool ::= Int "<=" Int "<" Int   [function, functional]
+  rule A <= I < B => I >=Int A andBool (I <Int B)
+
   // word sizes
   syntax Int ::= "pow8"
                | "pow32"
@@ -45,13 +38,6 @@ module BRAINFUCK-DATA
   rule pow32 => 4294967296  [macro]
 
   // Envs
-  // TODO:
-  // - memory size
-  // - memory overflow behavior
-  // - cell overflow behavior
-  // - empty read behavior
-    // - write 0 to cell
-    // - leave cell unchanged
   syntax Int ::= EnvInt "<" Env ">"   [function]
   syntax EnvInt ::= "MemorySize"
                   | "WordSize"
@@ -69,10 +55,11 @@ module BRAINFUCK-DATA
   rule #memSize ENV => MemorySize < ENV >
 
   syntax Env ::= "DEFAULT"
-  rule MemorySize   < DEFAULT > => 30000
-  rule WordSize     < DEFAULT > => 8
-  rule WrapWords    < DEFAULT > => true
-  rule WrapMemory   < DEFAULT > => false
+  rule WordSize   < DEFAULT > => 8
+  rule MemorySize < DEFAULT > => 30000
+  rule WrapWords  < DEFAULT > => true
+  rule WrapMemory < DEFAULT > => false
+  rule EOFNoOp    < DEFAULT > => false
 
   syntax K ::= "#parseRuntime" String [function]
   rule #parseRuntime S => .K

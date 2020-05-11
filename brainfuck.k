@@ -60,24 +60,24 @@ module BRAINFUCK
   rule
     <k> INCVAL => .K ...</k>
     <ptr> PTR </ptr>
-    <mem>... PTR |-> (M => #winc M ENV ) ...</mem>
+    <mem>... PTR |-> (M => chop (inc M) (#intSize ENV)) ...</mem>
     <env> ENV </env>
   requires WrapWords < ENV >
   // non-wrapping increment
   rule
     <k> INCVAL => .K ...</k>
     <ptr> PTR </ptr>
-    <mem>... PTR |-> (M => inc M ) ...</mem>
+    <mem>... PTR |-> (M => inc M) ...</mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
     andBool inc M <Int #intSize ENV
   rule
-    <k> (. => #halt WORD_OVERFLOW) ~> INCVAL ...</k>
+    <k> (.K => #halt WORD_OVERFLOW) ~> INCVAL ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> M ...</mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
-    andBool (notBool inc M <Int #intSize ENV)
+    andBool inc M >=Int #intSize ENV
 
 
   /// -
@@ -85,7 +85,7 @@ module BRAINFUCK
   rule
     <k> DECVAL => .K ...</k>
     <ptr> PTR </ptr>
-    <mem>... PTR |-> (M => #wdec M ENV) ...</mem>
+    <mem>... PTR |-> (M => chop (dec M) (#intSize ENV)) ...</mem>
     <env> ENV </env>
   requires WrapWords < ENV >
   rule
@@ -96,21 +96,21 @@ module BRAINFUCK
   requires WrapWords < ENV >
     andBool (notBool (PTR in keys(RHO)))
 
-  // non-wrapping derement
+  // non-wrapping decrement
   rule
     <k> DECVAL => .K ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> (M => dec M) ...</mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
-    andBool dec M >=Int 0
+    andBool M >=Int 1
   rule
     <k> (.K => #halt WORD_OVERFLOW) ~> DECVAL ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> M ...</mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
-    andBool (notBool dec M >=Int 0)
+    andBool M <Int 1
   rule
     <k> (.K => #halt WORD_OVERFLOW) ~> DECVAL ...</k>
     <ptr> PTR </ptr>
@@ -123,7 +123,7 @@ module BRAINFUCK
   /// >
   rule
     <k> INCPTR => .K ...</k>
-    <ptr> PTR => #winc PTR ENV </ptr>
+    <ptr> PTR => chop (inc PTR) (#memSize ENV) </ptr>
     <env> ENV </env>
   requires WrapMemory < ENV >
 
@@ -132,32 +132,34 @@ module BRAINFUCK
     <ptr> PTR => inc PTR </ptr>
     <env> ENV </env>
   requires notBool WrapMemory < ENV >
-    andBool inc PTR <Int MemorySize < ENV >
+    andBool inc PTR <Int #memSize ENV
 
   rule
     <k> (.K => #halt MEMORY_OVERFLOW) ~> INCPTR ...</k>
     <ptr> PTR </ptr>
     <env> ENV </env>
   requires notBool WrapMemory < ENV >
-    andBool inc PTR >=Int MemorySize < ENV >
+    andBool inc PTR >=Int #memSize ENV
 
 
   /// <
   rule
     <k> DECPTR => .K ...</k>
-    <ptr> PTR => #wdec PTR ENV </ptr>
+    <ptr> PTR => chop (dec PTR) (#memSize ENV) </ptr>
     <env> ENV </env>
   requires WrapMemory < ENV >
 
   rule
     <k> DECPTR => .K ...</k>
     <ptr> PTR => dec PTR </ptr>
+    <env> ENV </env>
   requires notBool WrapMemory < ENV >
     andBool dec PTR >=Int 0
 
   rule
     <k> (.K => #halt MEMORY_OVERFLOW) ~> DECPTR ...</k>
     <ptr> PTR => dec PTR </ptr>
+    <env> ENV </env>
   requires notBool WrapMemory < ENV >
     andBool dec PTR <Int 0
 
@@ -227,7 +229,7 @@ module BRAINFUCK
 
   // read - overflow
   rule
-    <k> (. => #halt WORD_OVERFLOW) ~> READ ...</k>
+    <k> (.K => #halt WORD_OVERFLOW) ~> READ ...</k>
     <env> ENV </env>
     <input> ListItem(IN:String) ...</input>
   requires notBool 0 <= ordHead IN < #intSize ENV
