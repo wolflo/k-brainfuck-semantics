@@ -1,50 +1,29 @@
-requires "data.k"
 requires "syntax.k"
+requires "types.k"
+requires "data.k"
+
 // TODO:
-// - how to make unset env parameters default to DEFAULT?
-// - ignore non-C-style comments - see python semantics?
+// - ignore non-C-style comments
 // - haskell backend error
-// - halts
 module BRAINFUCK
   imports DOMAINS
   imports BRAINFUCK-SYNTAX
   imports BRAINFUCK-DATA
-
-  syntax KResult ::= Op
-  syntax Op ::= "INCVAL"
-              | "DECVAL"
-              | "INCPTR"
-              | "DECPTR"
-              | "READ"
-              | "PRINT"
-              | "LOOP" Exp
-
-////
-  syntax Env ::= "NOWRAP"
-  rule X:EnvInt  < NOWRAP > => X < DEFAULT >
-  rule X:EnvBool < NOWRAP > => X < DEFAULT >
-    requires notBool X ==K WrapWords
-  rule WrapWords < NOWRAP > => false
-////
+  imports BRAINFUCK-TYPES
 
   configuration
     <bf>
       <k>     $PGM:Exp </k>
       <ptr>   0:Int    </ptr>
       <mem>   .Map     </mem>
-      <env>   NOWRAP  </env>
+      <env>   DEFAULT  </env>
       <input> .List    </input>
       <output stream="stdout"> .List </output>
     </bf>
 
-
   rule E:Exp => #exp2Op E             [structural]
   rule E1:Exp E2:Exp => E1 ~> E2      [structural]
 
-  syntax ErrorCode ::= ".ErrorCode"
-                     | "EOF"
-                     | "WORD_OVERFLOW"
-                     | "MEMORY_OVERFLOW"
   syntax KItem ::= "#halt" ErrorCode
   rule <k> #halt ERROR ~> (_:Exp => .K) ...</k>
   rule <k> #halt ERROR ~> (_:Op => .K) ...</k>

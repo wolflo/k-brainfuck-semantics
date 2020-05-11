@@ -1,15 +1,17 @@
 requires "syntax.k"
+requires "types.k"
 
 module BRAINFUCK-DATA
   imports STRING
   imports BRAINFUCK-SYNTAX
+  imports BRAINFUCK-TYPES
 
-  // convert first character of a string to an integer
+  // convert first char of a string to an integer
   syntax Int ::= "ordHead" String [function]
-  rule ordHead S => ordChar( substrString(S, 0, 1) )
-    requires lengthString( S ) >Int 0
+  rule ordHead S => ordChar(substrString(S, 0, 1))
+    requires lengthString(S) >Int 0
   rule ordHead S => 0
-    requires lengthString( S ) ==Int 0
+    requires lengthString(S) ==Int 0
 
   // increment integers
   syntax Int ::= "inc" Int        [function, functional]
@@ -37,21 +39,11 @@ module BRAINFUCK-DATA
   rule pow8  => 256         [macro]
   rule pow32 => 4294967296  [macro]
 
-  // Envs
-  syntax Int ::= EnvInt "<" Env ">"   [function]
-  syntax EnvInt ::= "MemorySize"
-                  | "WordSize"
+  syntax Int ::= "#intSize" Env       [function]
+  rule #intSize ENV => pow8   requires WordSize < ENV > ==Int 8
+  rule #intSize ENV => pow32  requires WordSize < ENV > ==Int 32
 
-  syntax Bool ::= EnvBool "<" Env ">" [function]
-  syntax EnvBool ::= "WrapMemory"
-                   | "WrapWords"
-                   | "EOFNoOp"
-
-  syntax Int ::= "#intSize" Env [function]
-  rule #intSize ENV => pow8  requires WordSize < ENV > ==Int 8
-  rule #intSize ENV  => pow32  requires WordSize < ENV > ==Int 32
-
-  syntax Int ::= "#memSize" Env [function]
+  syntax Int ::= "#memSize" Env       [function]
   rule #memSize ENV => MemorySize < ENV >
 
   syntax Env ::= "DEFAULT"
@@ -64,8 +56,10 @@ module BRAINFUCK-DATA
   syntax K ::= "#parseRuntime" String [function]
   rule #parseRuntime S => .K
     requires S ==String ""
-  rule #parseRuntime S => (#parseCmd substrString(S, 0, 1)) ~> (#parseRuntime substrString(S, 1, lengthString(S)))
-    requires S =/=String ""
+  rule #parseRuntime S =>
+    (#parseCmd substrString(S, 0, 1)) ~>
+    (#parseRuntime substrString(S, 1, lengthString(S)))
+  requires S =/=String ""
 
   // TODO: find a cleaner way to do this
   syntax Cmd ::= "#parseCmd" String [function]
@@ -75,5 +69,14 @@ module BRAINFUCK-DATA
   rule #parseCmd "<" => <
   rule #parseCmd "," => ,
   rule #parseCmd "." => .:Cmd
+
+  // an alternative Env example that doesn't wrap words or memory
+  syntax Env ::= "NO_WRAP"
+  rule X:EnvInt  < NO_WRAP > => X < DEFAULT >
+  rule X:EnvBool < NO_WRAP > => X < DEFAULT >
+    requires notBool X ==K WrapWords
+    andBool (notBool X ==K WrapMemory)
+  rule WrapWords  < NO_WRAP > => false
+  rule WrapMemory < NO_WRAP > => false
 
 endmodule
