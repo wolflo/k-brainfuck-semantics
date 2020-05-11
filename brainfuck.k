@@ -70,14 +70,14 @@ module BRAINFUCK
     <mem>... PTR |-> (M => inc M ) ...</mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
-    andBool 0 <= inc M < #intSize ENV
+    andBool inc M <Int #intSize ENV
   rule
     <k> (. => #halt WORD_OVERFLOW) ~> INCVAL ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> M ...</mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
-    andBool (notBool 0 <= inc M < #intSize ENV)
+    andBool (notBool inc M <Int #intSize ENV)
 
 
   /// -
@@ -103,14 +103,14 @@ module BRAINFUCK
     <mem>... PTR |-> (M => dec M) ...</mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
-    andBool 0 <= dec M < #intSize ENV
+    andBool dec M >=Int 0
   rule
     <k> (.K => #halt WORD_OVERFLOW) ~> DECVAL ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> M ...</mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
-    andBool (notBool 0 <= dec M < #intSize ENV)
+    andBool (notBool dec M >=Int 0)
   rule
     <k> (.K => #halt WORD_OVERFLOW) ~> DECVAL ...</k>
     <ptr> PTR </ptr>
@@ -123,30 +123,43 @@ module BRAINFUCK
   /// >
   rule
     <k> INCPTR => .K ...</k>
-    <ptr> PTR => inc PTR </ptr>
-    <env> ENV </env>
-  requires notBool WrapMemory < ENV >
-    andBool 0 <= inc PTR < MemorySize < ENV >
-
-  rule
-    <k> INCPTR => .K ...</k>
     <ptr> PTR => #winc PTR ENV </ptr>
     <env> ENV </env>
   requires WrapMemory < ENV >
+
+  rule
+    <k> INCPTR => .K ...</k>
+    <ptr> PTR => inc PTR </ptr>
+    <env> ENV </env>
+  requires notBool WrapMemory < ENV >
+    andBool inc PTR <Int MemorySize < ENV >
 
   rule
     <k> (.K => #halt MEMORY_OVERFLOW) ~> INCPTR ...</k>
     <ptr> PTR </ptr>
     <env> ENV </env>
   requires notBool WrapMemory < ENV >
-    andBool (notBool 0 <= inc PTR < MemorySize < ENV >)
+    andBool inc PTR >=Int MemorySize < ENV >
 
 
   /// <
   rule
     <k> DECPTR => .K ...</k>
-    <ptr> PTR => PTR -Int 1 </ptr>
-  requires PTR >=Int 1
+    <ptr> PTR => #wdec PTR ENV </ptr>
+    <env> ENV </env>
+  requires WrapMemory < ENV >
+
+  rule
+    <k> DECPTR => .K ...</k>
+    <ptr> PTR => dec PTR </ptr>
+  requires notBool WrapMemory < ENV >
+    andBool dec PTR >=Int 0
+
+  rule
+    <k> (.K => #halt MEMORY_OVERFLOW) ~> DECPTR ...</k>
+    <ptr> PTR => dec PTR </ptr>
+  requires notBool WrapMemory < ENV >
+    andBool dec PTR <Int 0
 
 
   /// [ ... ]
