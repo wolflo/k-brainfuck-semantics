@@ -59,6 +59,7 @@ module BRAINFUCK-DATA
   syntax Bool ::= EnvBool "<" Env ">" [function]
   syntax EnvBool ::= "WrapMemory"
                    | "WrapWords"
+                   | "EOFNoOp"
 
   syntax Int ::= "#intSize" Env [function]
   rule #intSize ENV => pow8  requires WordSize < ENV > ==Int 8
