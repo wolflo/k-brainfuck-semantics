@@ -1,21 +1,22 @@
 module INCVAL-SPEC
   imports BRAINFUCK
+
   rule
     <bf>
       <k>
         +
       =>
         .K
-      </k>
-      <ptr>    P:Int       </ptr>
+      ...</k>
+      <ptr> 0 </ptr>
       <mem>
         .Map
       =>
-        P |-> 1
+        0 |-> 1
       </mem>
-      <env>    DEFAULT     </env>
-      <input>  .List       </input>
+      <env> DEFAULT </env>
+      <input> .List </input>
       <output> .List </output>
     </bf>
-  requires P >=Int 0 andBool P <=Int 255
+
 endmodule

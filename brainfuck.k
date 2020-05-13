@@ -13,7 +13,7 @@ module BRAINFUCK
 
   configuration
     <bf>
-      <k>     $PGM:K   </k>
+      <k>     $PGM:Exp </k>
       <ptr>   0:Int    </ptr>
       <mem>   .Map     </mem>
       <env>   DEFAULT  </env>
