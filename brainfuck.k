@@ -13,7 +13,7 @@ module BRAINFUCK
 
   configuration
     <bf>
-      <k>     $PGM:Exp </k>
+      <k>     $PGM:K   </k>
       <ptr>   0:Int    </ptr>
       <mem>   .Map     </mem>
       <env>   DEFAULT  </env>
@@ -21,8 +21,16 @@ module BRAINFUCK
       <output stream="stdout"> .List </output>
     </bf>
 
-  rule E:Exp => #exp2Op E             [structural]
   rule E1:Exp E2:Exp => E1 ~> E2      [structural]
+
+  rule +        => INCVAL             [structural]
+  rule -        => DECVAL             [structural]
+  rule >        => INCPTR             [structural]
+  rule <        => DECPTR             [structural]
+  rule ,        => READ               [structural]
+  rule .:Cmd    => PRINT              [structural]
+  rule [ ]      => LOOP .             [structural]
+  rule [ BODY ] => LOOP BODY          [structural]
 
   syntax KItem ::= "#halt" ErrorCode
   rule <k> #halt ERROR ~> (_:Exp => .K) ...</k>
@@ -70,7 +78,7 @@ module BRAINFUCK
   rule
     <k> DECVAL => .K ...</k>
     <ptr> PTR </ptr>
-    <mem> RHO:Map (.Map => PTR |-> chop -1 (#intSize ENV) ) </mem>
+    <mem> RHO:Map (.Map => PTR |-> chop -1 (#intSize ENV)) </mem>
     <env> ENV </env>
   requires WrapWords < ENV >
     andBool (notBool (PTR in keys(RHO)))
@@ -184,17 +192,18 @@ module BRAINFUCK
   requires notBool (PTR in keys(RHO))
     andBool 0 <= ordHead IN < #intSize ENV
 
-  // EOF read - write 0
+  // EOF read - write EOFValue to cell
   rule
     <k> READ => .K ...</k>
-    <mem>... PTR |-> (_ => 0) ...</mem>
+    <ptr> PTR </ptr>
+    <mem>... PTR |-> (_ => chop (#eofVal ENV) (#intSize ENV)) ...</mem>
     <env> ENV </env>
     <input> .List </input>
   requires notBool (EOFNoOp < ENV >)
   rule
     <k> READ => .K ...</k>
     <ptr> PTR </ptr>
-    <mem> RHO:Map (.Map => PTR |-> 0) </mem>
+    <mem> RHO:Map (.Map => PTR |-> chop (#eofVal ENV) (#intSize ENV)) </mem>
     <env> ENV </env>
     <input> .List </input>
   requires notBool (EOFNoOp < ENV >)
@@ -226,16 +235,5 @@ module BRAINFUCK
     <mem> RHO:Map </mem>
     <output>... .List => ListItem(chrChar(0))</output>  //TODO
   requires notBool (PTR in keys(RHO))
-
-
-  syntax Op ::= "#exp2Op" Exp       [function]
-  rule #exp2Op +        => INCVAL
-  rule #exp2Op -        => DECVAL
-  rule #exp2Op >        => INCPTR
-  rule #exp2Op <        => DECPTR
-  rule #exp2Op ,        => READ
-  rule #exp2Op .:Cmd    => PRINT
-  rule #exp2Op [ ]      => LOOP .
-  rule #exp2Op [ BODY ] => LOOP BODY
 
 endmodule

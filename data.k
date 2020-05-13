@@ -46,29 +46,41 @@ module BRAINFUCK-DATA
   syntax Int ::= "#memSize" Env       [function]
   rule #memSize ENV => MemorySize < ENV >
 
+  syntax Int ::= "#eofVal" Env        [function]
+  rule #eofVal ENV => EOFValue < ENV >
+
   syntax Env ::= "DEFAULT"
   rule WordSize   < DEFAULT > => 8
   rule MemorySize < DEFAULT > => 30000
+  rule EOFValue   < DEFAULT > => 0
   rule WrapWords  < DEFAULT > => true
   rule WrapMemory < DEFAULT > => false
   rule EOFNoOp    < DEFAULT > => false
 
-  syntax K ::= "#parseRuntime" String [function]
-  rule #parseRuntime S => .K
-    requires S ==String ""
-  rule #parseRuntime S =>
-    (#parseCmd substrString(S, 0, 1)) ~>
-    (#parseRuntime substrString(S, 1, lengthString(S)))
-  requires S =/=String ""
+  /* syntax Exp ::= "#parseRuntime" String [function] */
+  /* rule #parseRuntime S => String2Id(S) */
+
+  /* syntax K ::= "#parseRuntime" String [function] */
+  /* rule #parseRuntime S => .K */
+  /*   requires lengthString(S) ==Int 0 */
+  /* rule #parseRuntime S => */
+  /*   (#parseCmd substrString(S, 0, 1)) ~> */
+  /*   (#parseRuntime substrString(S, 1, lengthString(S))) */
+  /*   /1* (#parseCmd substrString(S, 0, 1)) (#parseRuntime substrString(S, 1, lengthString(S))) *1/ */
+  /* requires lengthString(S) >=Int 1 */
+  
 
   // TODO: find a cleaner way to do this
-  syntax Cmd ::= "#parseCmd" String [function]
-  rule #parseCmd "+" => +
-  rule #parseCmd "-" => -
-  rule #parseCmd ">" => >
-  rule #parseCmd "<" => <
-  rule #parseCmd "," => ,
-  rule #parseCmd "." => .:Cmd
+  // TODO: Need to find a way to go from string to KAST
+  // Whiles are screwing this up. And the way we're going from Exp -> Cmd without
+  // strings is messing up proofs without #parseRuntime
+  /* syntax Cmd ::= "#parseCmd" String [function] */
+  /* rule #parseCmd "+" => + */
+  /* rule #parseCmd "-" => - */
+  /* rule #parseCmd ">" => > */
+  /* rule #parseCmd "<" => < */
+  /* rule #parseCmd "," => , */
+  /* rule #parseCmd "." => .:Cmd */
 
   // an alternative Env example that doesn't wrap words or memory
   syntax Env ::= "NO_WRAP"
