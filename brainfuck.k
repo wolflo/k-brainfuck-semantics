@@ -18,7 +18,7 @@ module BRAINFUCK
       <mem>   .Map     </mem>
       <env>   DEFAULT  </env>
       <input> .List    </input>
-      <output stream="stdout"> .List </output>
+      <output> .List </output>
     </bf>
 
   rule E1:Exp E2:Exp => E1 ~> E2      [structural]
@@ -42,7 +42,7 @@ module BRAINFUCK
     <k> INCVAL => .K ...</k>
     <ptr> PTR </ptr>
     <mem> RHO:Map (.Map => PTR |-> 1) </mem>
-  requires notBool (PTR in keys(RHO))
+  requires notBool (PTR in_keys(RHO))
   // wrapping increment
   rule
     <k> INCVAL => .K ...</k>
@@ -81,7 +81,7 @@ module BRAINFUCK
     <mem> RHO:Map (.Map => PTR |-> chop -1 (#intSize ENV)) </mem>
     <env> ENV </env>
   requires WrapWords < ENV >
-    andBool (notBool (PTR in keys(RHO)))
+    andBool (notBool (PTR in_keys(RHO)))
 
   // non-wrapping decrement
   rule
@@ -104,7 +104,7 @@ module BRAINFUCK
     <mem> RHO:Map </mem>
     <env> ENV </env>
   requires notBool WrapWords < ENV >
-    andBool (notBool (PTR in keys(RHO)))
+    andBool (notBool (PTR in_keys(RHO)))
 
 
   /// >
@@ -165,8 +165,8 @@ module BRAINFUCK
   rule
     <k> LOOP OPS => .K ...</k>
     <ptr> PTR </ptr>
-    <mem> RHO </mem>
-  requires notBool (PTR in keys(RHO))
+    <mem> RHO:Map </mem>
+  requires notBool (PTR in_keys(RHO))
 
 // read
 // - eof action
@@ -189,7 +189,7 @@ module BRAINFUCK
     <mem> RHO:Map (.Map => PTR |-> ordHead IN ) </mem>
     <env> ENV </env>
     <input> ListItem(IN) => .List ...</input>
-  requires notBool (PTR in keys(RHO))
+  requires notBool (PTR in_keys(RHO))
     andBool 0 <= ordHead IN < #intSize ENV
 
   // EOF read - write EOFValue to cell
@@ -207,7 +207,7 @@ module BRAINFUCK
     <env> ENV </env>
     <input> .List </input>
   requires notBool (EOFNoOp < ENV >)
-    andBool (notBool (PTR in keys(RHO)))
+    andBool (notBool (PTR in_keys(RHO)))
   // EOF Read - no op
   rule
     <k> READ => .K ...</k>
@@ -234,6 +234,10 @@ module BRAINFUCK
     <ptr> PTR </ptr>
     <mem> RHO:Map </mem>
     <output>... .List => ListItem(chrChar(0))</output>  //TODO
-  requires notBool (PTR in keys(RHO))
+  requires notBool (PTR in_keys(RHO))
+
+  //TODO: shouldnt need simplifications this basic
+  rule X:Int +Int A -Int B => X +Int (A -Int B) [simplification]
+  rule X:Int +Int A +Int B => X +Int (A +Int B) [simplification]
 
 endmodule
