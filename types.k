@@ -20,7 +20,7 @@ module BRAINFUCK-TYPES
   syntax Env
   syntax Int ::= EnvInt "<" Env ">"   [function]
   syntax EnvInt ::= "MemorySize"
-                  | "WordSize"
+                  | "WordSizeBits"
                   | "EOFValue"
 
   syntax Bool ::= EnvBool "<" Env ">" [function]

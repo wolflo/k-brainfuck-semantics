@@ -4,7 +4,6 @@ requires "data.k"
 
 // TODO:
 // - ignore non-C-style comments
-// - haskell backend error
 module BRAINFUCK
   imports DOMAINS
   imports BRAINFUCK-SYNTAX
@@ -13,16 +12,18 @@ module BRAINFUCK
 
   configuration
     <bf>
-      <k>     $PGM:Exp </k>
-      <ptr>   0:Int    </ptr>
-      <mem>   .Map     </mem>
-      <env>   DEFAULT  </env>
-      <input> .List    </input>
-      <output> .List </output>
+      <k>      $PGM:Exp </k>
+      <ptr>    0:Int    </ptr>
+      <mem>    .Map     </mem>
+      <env>    DEFAULT  </env>
+      <input>  .List    </input>
+      <output> .List    </output>
     </bf>
 
+  // sequence expressions
   rule E1:Exp E2:Exp => E1 ~> E2      [structural]
 
+  // brainfuck commands to internal op representation
   rule +        => INCVAL             [structural]
   rule -        => DECVAL             [structural]
   rule >        => INCPTR             [structural]
@@ -32,6 +33,7 @@ module BRAINFUCK
   rule [ ]      => LOOP .             [structural]
   rule [ BODY ] => LOOP BODY          [structural]
 
+  // halt takes an error code and consumes remaining operations
   syntax KItem ::= "#halt" ErrorCode
   rule <k> #halt ERROR ~> (_:Exp => .K) ...</k>
   rule <k> #halt ERROR ~> (_:Op => .K) ...</k>
@@ -43,6 +45,7 @@ module BRAINFUCK
     <ptr> PTR </ptr>
     <mem> RHO:Map (.Map => PTR |-> 1) </mem>
   requires notBool (PTR in_keys(RHO))
+
   // wrapping increment
   rule
     <k> INCVAL => .K ...</k>
@@ -50,6 +53,7 @@ module BRAINFUCK
     <mem>... PTR |-> (M => chop (inc M) (#intSize ENV)) ...</mem>
     <env> ENV </env>
   requires WrapWords < ENV >
+
   // non-wrapping increment
   rule
     <k> INCVAL => .K ...</k>
@@ -58,6 +62,8 @@ module BRAINFUCK
     <env> ENV </env>
   requires notBool WrapWords < ENV >
     andBool inc M <Int #intSize ENV
+
+  // halt on overflow if non-wrapping
   rule
     <k> (.K => #halt WORD_OVERFLOW) ~> INCVAL ...</k>
     <ptr> PTR </ptr>
@@ -75,6 +81,8 @@ module BRAINFUCK
     <mem>... PTR |-> (M => chop (dec M) (#intSize ENV)) ...</mem>
     <env> ENV </env>
   requires WrapWords < ENV >
+
+  // wrapping decrement, uninitialized memory cell
   rule
     <k> DECVAL => .K ...</k>
     <ptr> PTR </ptr>
@@ -91,6 +99,8 @@ module BRAINFUCK
     <env> ENV </env>
   requires notBool WrapWords < ENV >
     andBool M >=Int 1
+
+  // halt on underflow if non-wrapping
   rule
     <k> (.K => #halt WORD_OVERFLOW) ~> DECVAL ...</k>
     <ptr> PTR </ptr>
@@ -98,6 +108,8 @@ module BRAINFUCK
     <env> ENV </env>
   requires notBool WrapWords < ENV >
     andBool M <Int 1
+
+  // halt on decrement of uninitialized memory cell if non-wrapping
   rule
     <k> (.K => #halt WORD_OVERFLOW) ~> DECVAL ...</k>
     <ptr> PTR </ptr>
@@ -108,12 +120,14 @@ module BRAINFUCK
 
 
   /// >
+  // wrapping pointer increment
   rule
     <k> INCPTR => .K ...</k>
     <ptr> PTR => chop (inc PTR) (#memSize ENV) </ptr>
     <env> ENV </env>
   requires WrapMemory < ENV >
 
+  // non-wrapping pointer increment
   rule
     <k> INCPTR => .K ...</k>
     <ptr> PTR => inc PTR </ptr>
@@ -121,6 +135,7 @@ module BRAINFUCK
   requires notBool WrapMemory < ENV >
     andBool inc PTR <Int #memSize ENV
 
+  // halt on memory overflow if non-wrapping
   rule
     <k> (.K => #halt MEMORY_OVERFLOW) ~> INCPTR ...</k>
     <ptr> PTR </ptr>
@@ -130,12 +145,14 @@ module BRAINFUCK
 
 
   /// <
+  // wrapping pointer decrement
   rule
     <k> DECPTR => .K ...</k>
     <ptr> PTR => chop (dec PTR) (#memSize ENV) </ptr>
     <env> ENV </env>
   requires WrapMemory < ENV >
 
+  // non-wrapping pointer decrement
   rule
     <k> DECPTR => .K ...</k>
     <ptr> PTR => dec PTR </ptr>
@@ -143,6 +160,7 @@ module BRAINFUCK
   requires notBool WrapMemory < ENV >
     andBool dec PTR >=Int 0
 
+  // halt on memory underflow if non-wrapping
   rule
     <k> (.K => #halt MEMORY_OVERFLOW) ~> DECPTR ...</k>
     <ptr> PTR => dec PTR </ptr>
@@ -152,16 +170,21 @@ module BRAINFUCK
 
 
   /// [ ... ]
+  // enter loop
   rule
     <k> LOOP OPS => OPS ~> LOOP OPS ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> M ...</mem>
   requires M >Int 0
+
+  // continue
   rule
     <k> LOOP OPS => .K ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> M ...</mem>
   requires M ==Int 0
+
+  // continue if uninitialized memory cell (uninitialized is zero)
   rule
     <k> LOOP OPS => .K ...</k>
     <ptr> PTR </ptr>
@@ -175,6 +198,7 @@ module BRAINFUCK
 // - is within wordsize
 
   /// ,
+  // read
   rule
     <k> READ => .K ...</k>
     <ptr> PTR </ptr>
@@ -182,7 +206,8 @@ module BRAINFUCK
     <env> ENV </env>
     <input> ListItem(IN:String) => .List ...</input>
   requires 0 <= ordHead IN < #intSize ENV
-  // uinitialized read
+
+  // read to an uninitialized memory cell
   rule
     <k> READ => .K ...</k>
     <ptr> PTR </ptr>
@@ -192,7 +217,7 @@ module BRAINFUCK
   requires notBool (PTR in_keys(RHO))
     andBool 0 <= ordHead IN < #intSize ENV
 
-  // EOF read - write EOFValue to cell
+  // read from empty input - write EOFValue to cell
   rule
     <k> READ => .K ...</k>
     <ptr> PTR </ptr>
@@ -200,6 +225,8 @@ module BRAINFUCK
     <env> ENV </env>
     <input> .List </input>
   requires notBool (EOFNoOp < ENV >)
+
+  // read from empty input - write EOFValue to uninitialized memory cell
   rule
     <k> READ => .K ...</k>
     <ptr> PTR </ptr>
@@ -208,14 +235,15 @@ module BRAINFUCK
     <input> .List </input>
   requires notBool (EOFNoOp < ENV >)
     andBool (notBool (PTR in_keys(RHO)))
-  // EOF Read - no op
+
+  // read from empty input - EOF no-op
   rule
     <k> READ => .K ...</k>
     <env> ENV </env>
     <input> .List </input>
   requires EOFNoOp < ENV >
 
-  // read - overflow
+  // read a value larger than the wordsize
   rule
     <k> (.K => #halt WORD_OVERFLOW) ~> READ ...</k>
     <env> ENV </env>
@@ -224,16 +252,19 @@ module BRAINFUCK
 
 
   /// .
+  // print
   rule
     <k> PRINT => .K ...</k>
     <ptr> PTR </ptr>
     <mem>... PTR |-> M ...</mem>
-    <output>... .List => ListItem(chrChar(M))</output>
+    <output>... .List => ListItem(chrChar(M)) </output>
+
+  // print an uninitialized memory cell
   rule
     <k> PRINT => .K ...</k>
     <ptr> PTR </ptr>
     <mem> RHO:Map </mem>
-    <output>... .List => ListItem(chrChar(0))</output>  //TODO
+    <output>... .List => ListItem(chrChar(0)) </output>  //TODO
   requires notBool (PTR in_keys(RHO))
 
 endmodule

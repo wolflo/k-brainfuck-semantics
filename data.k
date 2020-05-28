@@ -27,7 +27,7 @@ module BRAINFUCK-DATA
     requires I >=Int 0 andBool I <Int ON
   rule chop I ON => I %Int ON
     requires I >=Int ON
-  rule chop I ON => chop (ON +Int I) ON
+  rule chop I ON => chop (ON +Int I) ON   // I is negative
     requires I <Int 0
 
   syntax Bool ::= Int "<=" Int "<" Int   [function, functional]
@@ -40,8 +40,8 @@ module BRAINFUCK-DATA
   rule pow32 => 4294967296  [macro]
 
   syntax Int ::= "#intSize" Env       [function]
-  rule #intSize ENV => pow8   requires WordSize < ENV > ==Int 8
-  rule #intSize ENV => pow32  requires WordSize < ENV > ==Int 32
+  rule #intSize ENV => pow8   requires WordSizeBits < ENV > ==Int 8
+  rule #intSize ENV => pow32  requires WordSizeBits < ENV > ==Int 32
 
   syntax Int ::= "#memSize" Env       [function]
   rule #memSize ENV => MemorySize < ENV >
@@ -50,12 +50,12 @@ module BRAINFUCK-DATA
   rule #eofVal ENV => EOFValue < ENV >
 
   syntax Env ::= "DEFAULT"
-  rule WordSize   < DEFAULT > => 8
-  rule MemorySize < DEFAULT > => 30000
-  rule EOFValue   < DEFAULT > => 0
-  rule WrapWords  < DEFAULT > => true
-  rule WrapMemory < DEFAULT > => false
-  rule EOFNoOp    < DEFAULT > => false
+  rule WordSizeBits < DEFAULT > => 8
+  rule MemorySize   < DEFAULT > => 30000
+  rule EOFValue     < DEFAULT > => 0
+  rule WrapWords    < DEFAULT > => true
+  rule WrapMemory   < DEFAULT > => false
+  rule EOFNoOp      < DEFAULT > => false
 
   /* syntax Exp ::= "#parseRuntime" String [function] */
   /* rule #parseRuntime S => String2Id(S) */
