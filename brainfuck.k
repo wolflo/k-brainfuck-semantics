@@ -236,8 +236,4 @@ module BRAINFUCK
     <output>... .List => ListItem(chrChar(0))</output>  //TODO
   requires notBool (PTR in_keys(RHO))
 
-  //TODO: shouldnt need simplifications this basic
-  rule X:Int +Int A -Int B => X +Int (A -Int B) [simplification]
-  rule X:Int +Int A +Int B => X +Int (A +Int B) [simplification]
-
 endmodule
