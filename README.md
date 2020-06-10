@@ -39,7 +39,16 @@ kprove tests/specs/symbolic/draft/shift-spec.k --def-module LEMMAS
 ```
 
 ## Details
-todo
+- [brainfuck.k](brainfuck.k) defines the semantics of the language
+- [syntax.k](syntax.k) defines the syntax of the language
+- [types.k](types.k) defines the types used in the semantics
+- [data.k](data.k) defines helper functions used in the semantics
+
+
+There are a [number](https://esolangs.org/wiki/Brainfuck#Implementation_issues) of different implementations for the Brainfuck language.
+This implementation attempts to support most of these alternatives.
+[types.k][types.k] contains definitions of `EnvInt` and `EnvBool` which can be used to determine the memory size, word size, whether to wrap memory or memory cells, and what to do when reading EOF.
+Two example usages of these implementation changes are shown in [data.k](data.k).
 
 ## Resources and previous work
 - K formalizations of several esoteric programming languages, including Brainfuck: [esolang-semantics](https://github.com/ellisonch/esolang-semantics)
