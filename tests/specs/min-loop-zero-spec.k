@@ -1,10 +1,10 @@
-module LOOP-ZERO-INC-SPEC
+module MIN-LOOP-ZERO-SPEC
   imports BRAINFUCK
 
   rule
     <bf>
       <k>
-        [+]
+        [-]
       =>
         .K
       </k>
@@ -17,6 +17,6 @@ module LOOP-ZERO-INC-SPEC
       <output> .List </output>
     </bf>
   requires P >=Int 0 andBool P <Int 30000
-    andBool N >=Int 0 andBool N <Int 256
+    andBool N >=Int 0 andBool N <Int 5
 
 endmodule

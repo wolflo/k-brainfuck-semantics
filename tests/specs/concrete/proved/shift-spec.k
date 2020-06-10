@@ -4,7 +4,7 @@ module SHIFT-SPEC
   rule
     <bf>
       <k>
-        [->+<]
+        [ - > + < ]
       =>
         .K
       </k>
