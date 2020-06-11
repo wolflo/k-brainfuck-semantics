@@ -18,9 +18,9 @@ The K tool is required, and can be built using the instructions [here](https://g
 
 Build the semantics:
 ```
-kompile brainfuck.k --backend java
+kompile brainfuck.k --backend {llvm|java|haskell}
 ```
-The haskell backend can be used for proving by substituting `haskell` after the backend flag.
+The llvm backend is the default, and only supports concrete execution (`krun`). The Haskell backend only supports symbolic execution (`kprove`) and the java backend supports both, but is slowly being deprecated. If you run into issues, especially proving a spec, consider trying to `kompile` with a different backend. You will also need some different lemmas for proofs with the Haskell and Java backends.
 
 Run a Brainfuck program:
 ```
