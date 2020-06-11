@@ -2,8 +2,6 @@ requires "syntax.k"
 requires "types.k"
 requires "data.k"
 
-// TODO:
-// - ignore non-C-style comments
 module BRAINFUCK
   imports DOMAINS
   imports BRAINFUCK-SYNTAX
@@ -21,17 +19,17 @@ module BRAINFUCK
     </bf>
 
   // sequence expressions
-  rule E1:Exp E2:Exp => E1 ~> E2      [structural]
+  rule E1:Exp E2:Exp => E1 ~> E2      [macro]
 
   // brainfuck commands to internal op representation
-  rule +        => INCVAL             [structural]
-  rule -        => DECVAL             [structural]
-  rule >        => INCPTR             [structural]
-  rule <        => DECPTR             [structural]
-  rule ,        => READ               [structural]
-  rule .:Cmd    => PRINT              [structural]
-  rule [ ]      => LOOP .             [structural]
-  rule [ BODY ] => LOOP BODY          [structural]
+  rule +        => INCVAL             [macro]
+  rule -        => DECVAL             [macro]
+  rule >        => INCPTR             [macro]
+  rule <        => DECPTR             [macro]
+  rule ,        => READ               [macro]
+  rule .:Cmd    => PRINT              [macro]
+  rule [ ]      => LOOP .             [macro]
+  rule [ BODY ] => LOOP BODY          [macro]
 
   // halt takes an error code and consumes remaining operations
   syntax KItem ::= "#halt" ErrorCode
