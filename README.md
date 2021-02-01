@@ -1,8 +1,8 @@
 [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck) is a notoriously tiny programming language made up of eight commands:
 - `+`: Increment the value of the current memory cell
 - `-`: Decrement the value of the current memory cell
-- `<`: increment the memory pointer
-- `>`: decrement the memory pointer
+- `>`: increment the memory pointer
+- `<`: decrement the memory pointer
 - `[`: if the value of the current memory cell is zero, jump to the matching `]`. Else, continue to the next instruction
 - `]`: if the value of the current memory cell is nonzero, jump back to the matching `[`. Else, continue to the next instruction
 
@@ -26,7 +26,7 @@ Run a Brainfuck program:
 ```
 krun tests/hello_world.bf
 ```
-Note that the syntax definition currently does not support the "comments anywhere" standard used in Brainfuck, so comments will need to be removed or converted to C-style comments.
+Note that the syntax definition currently does not support the "comments anywhere" standard used in Brainfuck, so comments will need to be removed or converted to C-style comments (`// comment`, `/* long comment */`).
 
 Verify a formal specification of a program:
 ```
